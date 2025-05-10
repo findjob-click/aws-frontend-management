@@ -1,7 +1,7 @@
 {
   "name": "Terraform Lambda Env",
   "image": "mcr.microsoft.com/devcontainers/python:3.9",
-  "postCreateCommand": "cd terraform/lambda && zip ../lambda.zip linkedin_login.py",
+  "postCreateCommand": "cd lambda && zip lambda.zip linkedin_login.py",
   "features": {
     "ghcr.io/devcontainers/features/aws-cli:1": {}
   },
