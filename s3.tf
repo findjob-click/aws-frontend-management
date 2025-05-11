@@ -1,35 +1,24 @@
 resource "aws_s3_bucket" "website" {
   bucket = "findjob.click"
-  acl    = "public-read"
+  force_destroy = true
 
   website {
     index_document = "index.html"
   }
-
-  force_destroy = true
 }
 
-resource "aws_s3_bucket_policy" "public_read" {
+resource "aws_s3_bucket_ownership_controls" "website" {
   bucket = aws_s3_bucket.website.id
 
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Sid       = "PublicReadGetObject",
-        Effect    = "Allow",
-        Principal = "*",
-        Action    = "s3:GetObject",
-        Resource  = "${aws_s3_bucket.website.arn}/*"
-      }
-    ]
-  })
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
 }
 
-resource "aws_s3_object" "index_html" {
-  bucket       = aws_s3_bucket.website.id
-  key          = "index.html"
-  source       = "${path.module}/index.html"
-  content_type = "text/html"
-  acl          = "public-read"
+resource "aws_s3_bucket_public_access_block" "website" {
+  bucket                  = aws_s3_bucket.website.id
+  block_public_acls       = false
+  block_public_policy     = false
+  restrict_public_buckets = false
+  ignore_public_acls      = false
 }
