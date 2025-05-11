@@ -19,12 +19,12 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
 }
 
 resource "aws_lambda_function" "linkedin_login" {
-  filename         = "lambda.zip"
+  filename         = "${path.module}/../lambda/lambda.zip"
   function_name    = "linkedin_login"
   role             = aws_iam_role.lambda_exec.arn
   handler          = "linkedin_login.lambda_handler"
   runtime          = "python3.9"
-  source_code_hash = filebase64sha256("lambda.zip")
+  source_code_hash = filebase64sha256("${path.module}/../lambda/lambda.zip")
   environment {
     variables = {
       LINKEDIN_CLIENT_ID     = var.linkedin_client_id
