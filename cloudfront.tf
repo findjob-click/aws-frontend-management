@@ -30,16 +30,16 @@ resource "aws_acm_certificate_validation" "cert" {
 
 resource "aws_cloudfront_distribution" "website" {
   origin {
-    domain_name = "${aws_s3_bucket.website.bucket}.s3-website-us-east-1.amazonaws.com"
-    origin_id   = "s3-origin"
+  domain_name = "${aws_s3_bucket.website.bucket}.s3-website-us-east-1.amazonaws.com"
+  origin_id   = "s3-origin"
 
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
-    }
+  custom_origin_config {
+    http_port              = 80
+    https_port             = 443
+    origin_protocol_policy = "http-only"
+    origin_ssl_protocols   = ["TLSv1.2"]
   }
+}
 
   enabled             = true
   is_ipv6_enabled     = true
