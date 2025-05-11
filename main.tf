@@ -18,6 +18,29 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+resource "aws_iam_policy" "lambda_dynamodb_policy" {
+  name        = "LambdaDynamoDBPolicy"
+  description = "Allow Lambda to write to DynamoDB"
+  policy      = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = [
+          "dynamodb:PutItem"
+        ],
+        Effect   = "Allow",
+        Resource = aws_dynamodb_table.users.arn
+      }
+    ]
+  })
+}
+
+resource "aws_iam_policy_attachment" "lambda_dynamodb_access" {
+  name       = "lambda-dynamodb-access"
+  roles      = [aws_iam_role.lambda_exec.name]
+  policy_arn = aws_iam_policy.lambda_dynamodb_policy.arn
+}
+
 resource "aws_lambda_function" "linkedin_login" {
   filename         = "${path.module}/lambda/lambda.zip"
   function_name    = "linkedin_login"
