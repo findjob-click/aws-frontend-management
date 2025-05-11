@@ -39,10 +39,6 @@ resource "aws_cloudfront_distribution" "website" {
       origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1.2"]
     }
-    depends_on = [
-    aws_s3_bucket_website_configuration.website_config,
-    aws_acm_certificate_validation.cert
-  ]
   }
 
   enabled             = true
@@ -88,6 +84,10 @@ resource "aws_cloudfront_distribution" "website" {
   tags = {
     Name = "FindJobClick CloudFront"
   }
+  depends_on = [
+    aws_s3_bucket_website_configuration.website_config,
+    aws_acm_certificate_validation.cert
+  ]
 }
 
 data "aws_route53_zone" "primary" {
