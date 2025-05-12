@@ -11,7 +11,7 @@ mkdir -p lambda_temp/python
 pip install requests -t lambda_temp/python > /dev/null
 
 # Copy Lambda function
-cp lambda/linkedin_login.py lambda_temp/python/
+cp lambda/linkedin_login.py lambda_temp/
 
 # Zip it
 cd lambda_temp
