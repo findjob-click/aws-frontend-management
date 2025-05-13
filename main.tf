@@ -44,8 +44,16 @@ resource "aws_lambda_function" "linkedin_login" {
   handler          = "linkedin_login.lambda_handler"
   runtime          = "python3.9"
   source_code_hash = filebase64sha256("${path.module}/lambda/lambda.zip")
-
+/*
   environment {
+    variables = {
+      LINKEDIN_CLIENT_ID     = var.linkedin_client_id
+      LINKEDIN_CLIENT_SECRET = var.linkedin_client_secret
+      REDIRECT_URI           = "https://ki1y9x9avk.execute-api.us-east-1.amazonaws.com/linkedin/callback"
+    }
+  }
+*/
+environment {
     variables = {
       LINKEDIN_CLIENT_ID     = var.linkedin_client_id
       LINKEDIN_CLIENT_SECRET = var.linkedin_client_secret
