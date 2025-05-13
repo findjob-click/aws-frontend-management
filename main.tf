@@ -9,7 +9,7 @@ data "aws_iam_policy_document" "assume_lambda" {
 }
 
 resource "aws_iam_role" "lambda_exec" {
-  name = "lambda_exec_role"
+  name               = "lambda_exec_role"
   assume_role_policy = data.aws_iam_policy_document.assume_lambda.json
 }
 
@@ -21,17 +21,13 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
 resource "aws_iam_policy" "lambda_dynamodb_policy" {
   name        = "LambdaDynamoDBPolicy"
   description = "Allow Lambda to write to DynamoDB"
-  policy      = jsonencode({
+  policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [
-      {
-        Action = [
-          "dynamodb:PutItem"
-        ],
-        Effect   = "Allow",
-        Resource = aws_dynamodb_table.users.arn
-      }
-    ]
+    Statement = [{
+      Action   = ["dynamodb:PutItem"],
+      Effect   = "Allow",
+      Resource = aws_dynamodb_table.users.arn
+    }]
   })
 }
 
@@ -48,13 +44,14 @@ resource "aws_lambda_function" "linkedin_login" {
   handler          = "linkedin_login.lambda_handler"
   runtime          = "python3.9"
   source_code_hash = filebase64sha256("${path.module}/lambda/lambda.zip")
+
   environment {
-  variables = {
-    LINKEDIN_CLIENT_ID     = var.linkedin_client_id
-    LINKEDIN_CLIENT_SECRET = var.linkedin_client_secret
-    REDIRECT_URI           = "https://ki1y9x9avk.execute-api.us-east-1.amazonaws.com"
+    variables = {
+      LINKEDIN_CLIENT_ID     = var.linkedin_client_id
+      LINKEDIN_CLIENT_SECRET = var.linkedin_client_secret
+      REDIRECT_URI           = "https://ki1y9x9avk.execute-api.us-east-1.amazonaws.com/linkedin/callback"
+    }
   }
-}
 }
 
 resource "aws_apigatewayv2_api" "http_api" {
@@ -63,14 +60,13 @@ resource "aws_apigatewayv2_api" "http_api" {
 }
 
 resource "aws_apigatewayv2_integration" "lambda_integration" {
-  api_id             = aws_apigatewayv2_api.http_api.id
-  integration_type   = "AWS_PROXY"
-  integration_uri    = aws_lambda_function.linkedin_login.invoke_arn
-  integration_method = "POST"
+  api_id                 = aws_apigatewayv2_api.http_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.linkedin_login.invoke_arn
+  integration_method     = "POST"
   payload_format_version = "2.0"
 }
 
-# api gateway route (clearly explicit)
 resource "aws_apigatewayv2_route" "linkedin_callback" {
   api_id    = aws_apigatewayv2_api.http_api.id
   route_key = "GET /linkedin/callback"
@@ -92,9 +88,9 @@ resource "aws_lambda_permission" "apigw" {
 }
 
 resource "aws_dynamodb_table" "users" {
-  name           = "linkedin_users"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "id"
+  name         = "linkedin_users"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
 
   attribute {
     name = "id"
