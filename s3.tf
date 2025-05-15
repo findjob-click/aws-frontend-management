@@ -40,6 +40,8 @@ resource "aws_s3_object" "index_html" {
 
   # Explicitly force re-upload on changes
   source_hash  = filemd5("${path.module}/index.html")
+  # tell browsers & proxies not to cache this file long-term
+  cache_control = "no-cache, no-store, must-revalidate"
 }
 
 # Allow public read access explicitly
