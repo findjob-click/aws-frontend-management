@@ -16,7 +16,6 @@ table    = dynamodb.Table("linkedin_users")
 def parse_jwt(token: str) -> dict:
     """Decode a JWT without verifying signature to extract payload claims."""
     payload = token.split(".")[1]
-    # Pad base64 if needed
     padding = "=" * (-len(payload) % 4)
     decoded = base64.urlsafe_b64decode(payload + padding)
     return json.loads(decoded)
@@ -30,8 +29,8 @@ def lambda_handler(event, context):
     print(f">> ENV REDIRECT_URI: '{REDIRECT_URI}'")
 
     params = event.get("queryStringParameters") or {}
-    code  = params.get("code")
-    state = params.get("state")
+    code   = params.get("code")
+    state  = params.get("state")
     print("Query parameters:", params)
 
     if not code:
@@ -41,7 +40,7 @@ def lambda_handler(event, context):
         }
 
     try:
-        # Exchange authorization code for tokens
+        # 1️⃣ Exchange authorization code for tokens
         token_res = requests.post(
             "https://www.linkedin.com/oauth/v2/accessToken",
             headers={"Content-Type": "application/x-www-form-urlencoded"},
@@ -60,48 +59,71 @@ def lambda_handler(event, context):
         id_token     = tokens.get("id_token")
         access_token = tokens.get("access_token")
 
-        # Extract user info from id_token if present
+        # 2️⃣ Try extracting profile from id_token
         if id_token:
-            claims       = parse_jwt(id_token)
-            linkedin_id  = claims.get("sub")
-            first_name   = claims.get("given_name", "User")
-            email        = claims.get("email")
+            claims      = parse_jwt(id_token)
+            linkedin_id = claims.get("sub")
+            first_name  = claims.get("given_name", "")
+            last_name   = claims.get("family_name", "")
+            full_name   = claims.get("name", f"{first_name} {last_name}".strip())
+            email       = claims.get("email")
+            email_verified = claims.get("email_verified", False)
+            picture_url = claims.get("picture")
+            locale      = claims.get("locale")
+
         else:
-            # Fallback to REST v2 endpoints if id_token not provided
-            headers = {"Authorization": f"Bearer {access_token}"}
-
-            profile_res = requests.get("https://api.linkedin.com/v2/me", headers=headers)
-            profile_res.raise_for_status()
-            profile = profile_res.json()
-
-            email_res = requests.get(
-                "https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))",
-                headers=headers
+            # 3️⃣ Fallback: call the UserInfo endpoint
+            userinfo_res = requests.get(
+                "https://api.linkedin.com/v2/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"}
             )
-            email_res.raise_for_status()
-            email_data = email_res.json()
+            userinfo_res.raise_for_status()
+            user = userinfo_res.json()
+            print("UserInfo:", user)
 
-            linkedin_id = profile.get("id")
-            first_name  = profile.get("localizedFirstName", "User")
-            email       = email_data["elements"][0]["handle~"]["emailAddress"]
+            linkedin_id    = user.get("sub")
+            first_name     = user.get("given_name", "")
+            last_name      = user.get("family_name", "")
+            full_name      = user.get("name", f"{first_name} {last_name}".strip())
+            email          = user.get("email")
+            email_verified = user.get("email_verified", False)
+            picture_url    = user.get("picture")
+            locale         = user.get("locale")
 
-        # Store or update user record in DynamoDB
+        # 4️⃣ Store into DynamoDB (schemaless)
         table.put_item(Item={
-            "id":    linkedin_id,
-            "name":  first_name,
-            "email": email
+            "id":             linkedin_id,
+            "first_name":     first_name,
+            "last_name":      last_name,
+            "full_name":      full_name,
+            "email":          email,
+            "email_verified": email_verified,
+            "picture_url":    picture_url,
+            "locale":         locale
         })
 
-        # Return a simple HTML response
+        # 5️⃣ Render full HTML welcome page
+        html = f"""<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/>
+    <title>Welcome!</title>
+  </head>
+  <body>
+    <h1>Welcome, {full_name}!</h1>
+    <img src="{picture_url}" alt="Profile Picture" width="100"/><br/>
+    <p><strong>ID:</strong> {linkedin_id}</p>
+    <p><strong>First Name:</strong> {first_name}</p>
+    <p><strong>Last Name:</strong> {last_name}</p>
+    <p><strong>Email:</strong> {email} {'(verified)' if email_verified else '(unverified)'}</p>
+    <p><strong>Locale:</strong> {locale}</p>
+  </body>
+</html>"""
+
         return {
             "statusCode": 200,
             "headers": {"Content-Type": "text/html"},
-            "body": (
-                "<!DOCTYPE html>"
-                "<html><body>"
-                f"<h1>Hello {first_name}, welcome to FindJob.click!</h1>"
-                "</body></html>"
-            )
+            "body": html
         }
 
     except requests.HTTPError as err:
